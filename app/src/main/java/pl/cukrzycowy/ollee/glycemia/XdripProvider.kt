@@ -74,16 +74,19 @@ class XdripProvider : GlycemiaProvider {
 
         val slope = readNumericExtra(intent, "com.eveningoutpost.dexdrip.Extras.BgSlope")
 
-        val trend = when {
-            slope == null -> null
-            slope > 3 -> "UP2"
-            slope > 1 -> "UP"
-            slope < -3 -> "DOWN2"
-            slope < -1 -> "DOWN"
-            else -> "FLAT"
-        }
+                    // GlucoDataHandler reports BgSlope in mg/dL per millisecond (e.g. -8.3E-7),
+                                // not per minute, so classify trend from the ~5-minute-equivalent delta
+                                            // instead of comparing raw slope against per-minute-sized thresholds.
+                                                        val delta = readNumericExtra(intent, "delta") ?: slope?.let { it * 300000.0 }
 
-        val delta = readNumericExtra(intent, "delta") ?: slope?.let { it * 300000.0 }
+                                                                    val trend = when {
+                                                                                        delta == null -> null
+                                                                                        delta >= 15 -> "UP2"
+                                                                                        delta >= 5 -> "UP"
+                                                                                        delta <= -15 -> "DOWN2"
+                                                                                        delta <= -5 -> "DOWN"
+                                                                                        else -> "FLAT"
+                                                                    }
 
         val timestamp = if (intent.hasExtra("bg.timeStamp")) {
             intent.getLongExtra("bg.timeStamp", 0L).takeIf { it > 0 } ?: System.currentTimeMillis()
