@@ -49,7 +49,6 @@ fun WatchPairingScreen(onBack: () -> Unit) {
             val adapter = manager.adapter
             if (adapter?.isEnabled == true) {
                 bondedDevices.value = adapter.bondedDevices
-                    .filter { it.name?.contains("Ollee", ignoreCase = true) == true }
                     .sortedBy { it.name }
             }
         } catch (e: Exception) {
