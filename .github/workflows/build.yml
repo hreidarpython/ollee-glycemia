@@ -48,49 +48,54 @@ jobs:
           path: output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-debug.apk
           retention-days: 14
 
-- name: Decode keystore (if secrets are set)
-  if: >
-    env.KEYSTORE_BASE64 != '' &&
-    env.KEYSTORE_PASSWORD != '' &&
-    env.KEY_ALIAS != '' &&
-    env.KEY_PASSWORD != ''
-  env:
-    KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-    KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-    KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-    KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-  run: |
-    echo "$KEYSTORE_BASE64" | base64 --decode > ${{ github.workspace }}/release.keystore
-    echo "KEYSTORE_FILE=${{ github.workspace }}/release.keystore" >> $GITHUB_ENV
-    echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
-    echo "KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
-    echo "KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
-- name: Build Release APK
-  run: ./gradlew assembleRelease --no-daemon
-- name: Prepare Release APK name
-  run: |
-                        mkdir -p output/
-                        if [ -f app/build/outputs/apk/release/app-release.apk ]; then
-                          cp app/build/outputs/apk/release/app-release.apk output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
-                        elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-                        cp app/build/outputs/apk/release/app-release-unsigned.apk output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
-                    fi
-                - name: Upload Release APK
-                  uses: actions/upload-artifact@v4
-                  with:
-                    name: ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
-                    path: output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
-                    retention-days: 14
-                - name: Remove keystore file
-                  if: always()
-                  run: rm -f ${{ github.workspace }}/release.keystore
-                - name: Create Release
-                  uses: softprops/action-gh-release@v2
-                  with:
-                    tag_name: build-${{ steps.git_sha.outputs.sha }}
-                    name: Build ${{ steps.git_sha.outputs.sha }}
-                    files: |
-                      output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-debug.apk
-                      output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
-                  env:
-                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Decode keystore (if secrets are set)
+        if: >
+          env.KEYSTORE_BASE64 != '' &&
+          env.KEYSTORE_PASSWORD != '' &&
+          env.KEY_ALIAS != '' &&
+          env.KEY_PASSWORD != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > ${{ github.workspace }}/release.keystore
+          echo "KEYSTORE_FILE=${{ github.workspace }}/release.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Prepare Release APK name
+        run: |
+          mkdir -p output/
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
+          elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
+          fi
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
+          path: output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
+          retention-days: 14
+
+      - name: Remove keystore file
+        if: always()
+        run: rm -f ${{ github.workspace }}/release.keystore
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ steps.git_sha.outputs.sha }}
+          name: Build ${{ steps.git_sha.outputs.sha }}
+          files: |
+            output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-debug.apk
+            output/ollee-glycemia-${{ steps.git_sha.outputs.sha }}-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
