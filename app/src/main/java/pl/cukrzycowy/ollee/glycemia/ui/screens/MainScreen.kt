@@ -76,6 +76,8 @@ import pl.cukrzycowy.ollee.glycemia.PairedWatch
 import pl.cukrzycowy.ollee.glycemia.WatchActivityState
 import pl.cukrzycowy.ollee.glycemia.WatchConnState
 import pl.cukrzycowy.ollee.glycemia.WatchStatus
+import pl.cukrzycowy.ollee.glycemia.GlycemiaUnit
+import pl.cukrzycowy.ollee.glycemia.GlycemiaUnitStore
 import pl.cukrzycowy.ollee.glycemia.WatchStore
 import pl.cukrzycowy.ollee.glycemia.ui.components.FoldableSection
 import pl.cukrzycowy.ollee.glycemia.ui.components.OlleeHeader
@@ -103,6 +105,18 @@ data class ProviderDataStatusInfo(
     val labelResId: Int,
     val color: Color
 )
+
+private fun formatDisplayValue(raw: String, unit: GlycemiaUnit): String {
+    val clean = raw.replace(",", ".")
+    val hasDecimal = clean.contains(".")
+    val value = clean.toFloatOrNull() ?: return raw
+    val mgDl = if (hasDecimal) value * GlycemiaUnitStore.MGDL_PER_MMOL else value
+    return GlycemiaUnitStore.formatMgDl(mgDl, unit)
+}
+
+private fun formatDisplayDelta(deltaMgDl: Float, unit: GlycemiaUnit): String {
+    return GlycemiaUnitStore.formatMgDlDelta(deltaMgDl, unit)
+}
 
 private fun calculateProviderStatus(context: Context, lastTimeMs: Long): ProviderDataStatusInfo {
     val now = System.currentTimeMillis()
@@ -168,6 +182,7 @@ fun MainScreen(nav: AppNavController) {
     var selectedProvider by remember { mutableStateOf(GlycemiaProviderManager.getSelected(context)) }
     val watchStatuses by AppState.watchStatuses.collectAsState()
 
+    var unit by remember { mutableStateOf(GlycemiaUnitStore.getUnit(context)) }
     var graphExpanded by remember { mutableStateOf(true) }
     var showProviderPicker by remember { mutableStateOf(false) }
     var showGraphOptions by remember { mutableStateOf(false) }
@@ -203,6 +218,7 @@ fun MainScreen(nav: AppNavController) {
                 val newLastDelta = prefs.getFloat("last_delta", Float.NaN)
                 val newLastTime = prefs.getLong("last_time", 0L)
 
+                unit = GlycemiaUnitStore.getUnit(context)
                 if (newLastTime != lastTime || newLastBg != lastBg) {
                     lastBg = newLastBg
                     lastDelta = newLastDelta
@@ -333,10 +349,10 @@ fun MainScreen(nav: AppNavController) {
                             fontSize = 13.sp
                         )
                         Text(
-                            text = "$lastBg" + (if (!lastDelta.isNaN()) " (${String.format("%+.1f", lastDelta)})" else "") + " @ $timeStr",
-                            color = OlleeColors.TextSecondary,
-                            fontSize = 12.sp
-                        )
+                                text = formatDisplayValue(lastBg, unit) + (if (!lastDelta.isNaN()) " (${formatDisplayDelta(lastDelta, unit)})" else "") + " @ $timeStr",
+                                color = OlleeColors.TextSecondary,
+                                fontSize = 12.sp
+                            )
                     }
                 }
 
