@@ -280,51 +280,31 @@ class BleService : Service() {
         if (bg.isNullOrBlank()) return "Err   "
 
         val clean = bg.replace(",", ".")
+        val isMmolSource = clean.contains(".")
+        val rawValue = clean.replace("[^0-9.]".toRegex(), "").toFloatOrNull() ?: return "Err "
 
-        val isMmol = clean.contains(".")
-
-        // ========================
-        // mg/dL: 3 chars glucose + 3 chars delta (left-padded), no trend arrow
-        // ========================
-        if (!isMmol) {
-            val mgdl = clean.replace("[^0-9]".toRegex(), "")
-                .toIntOrNull() ?: return "Err   "
-            val clampedMgdl = mgdl.coerceIn(0, 999)
-
-            val glucoseStr = clampedMgdl.toString().padStart(3, ' ')
-
-            val deltaStr = if (delta != null) {
-                val deltaInt = Math.round(delta).toInt().coerceIn(-99, 99)
-                deltaInt.toString().padStart(3, ' ')
-            } else {
-                "   "
-            }
-
-            return glucoseStr + deltaStr
-        }
-
-        // ========================
-        // mmol/L: legacy 6-char format (1 trend arrow + 5 value chars)
-        // ========================
-        val mmol = clean.toFloatOrNull() ?: return "Err   "
+        // always display mmol/L on the watch: values that arrived as a
+        // plain integer (no decimal point) are mg/dL readings from the
+        // provider, so convert them instead of showing the raw number
+        val mmol = if (isMmolSource) rawValue else rawValue / 18.0182f
         val valueStr = String.format("%.1f", mmol.coerceIn(0f, 99.9f))
 
         val arrow = when (trend) {
-                            "UP2" -> "^^"
-                            "UP" -> "^-"
-                            "FLAT" -> "--"
-                            "DOWN" -> "v-"
-                            "DOWN2" -> "vv"
-                            else -> "--"
+            "UP2" -> "^^"
+            "UP" -> "^-"
+            "FLAT" -> "--"
+            "DOWN" -> "v-"
+            "DOWN2" -> "vv"
+            else -> "--"
         }
 
-                    // watch has a fixed hardware colon that doubles as the decimal
-                                // point, so we never send ".": 2 chars int part + 1 decimal digit
-                                            // + 1 blank spacer + 2 char arrow = 6 total
-                                                        val valueParts = valueStr.split(".")
-                                                                    val intPart = valueParts[0].padStart(2, ' ').take(2)
-                                                                                val decPart = valueParts.getOrElse(1) { "0" }.take(1)
-                                                                                            return (intPart + decPart + " " + arrow).take(6)
+        // watch has a fixed hardware colon that doubles as the decimal
+        // point, so we never send ".": 2 chars int part + 1 decimal digit
+        // + 1 blank spacer + 2 char arrow = 6 total
+        val valueParts = valueStr.split(".")
+        val intPart = valueParts[0].padStart(2, ' ').take(2)
+        val decPart = valueParts.getOrElse(1) { "0" }.take(1)
+        return (intPart + decPart + " " + arrow).take(6)
     }
 
     private fun sendClearGlycemiaToAllWatches() {
