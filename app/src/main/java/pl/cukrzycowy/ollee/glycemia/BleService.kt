@@ -291,9 +291,9 @@ class BleService : Service() {
 
         val arrow = when (trend) {
             "UP2" -> "^^"
-            "UP" -> "^-"
+            "UP" -> "-^"
             "FLAT" -> "--"
-            "DOWN" -> "v-"
+            "DOWN" -> "-v"
             "DOWN2" -> "vv"
             else -> "--"
         }
