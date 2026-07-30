@@ -283,11 +283,9 @@ class BleService : Service() {
         val isMmolSource = clean.contains(".")
         val rawValue = clean.replace("[^0-9.]".toRegex(), "").toFloatOrNull() ?: return "Err "
 
-        // always display mmol/L on the watch: values that arrived as a
-        // plain integer (no decimal point) are mg/dL readings from the
-        // provider, so convert them instead of showing the raw number
-        val mmol = if (isMmolSource) rawValue else rawValue / 18.0182f
-        val valueStr = String.format("%.1f", mmol.coerceIn(0f, 99.9f))
+        // normalize the source value to mg/dL first, since providers may report
+        // either mg/dL (plain integer) or mmol/L (has a decimal point)
+        val mgDlValue = if (isMmolSource) rawValue * GlycemiaUnitStore.MGDL_PER_MMOL else rawValue
 
         val arrow = when (trend) {
             "UP2" -> "^^"
@@ -298,13 +296,25 @@ class BleService : Service() {
             else -> "--"
         }
 
-        // watch has a fixed hardware colon that doubles as the decimal
-        // point, so we never send ".": 2 chars int part + 1 decimal digit
-        // + 1 blank spacer + 2 char arrow = 6 total
-        val valueParts = valueStr.split(".")
-        val intPart = valueParts[0].padStart(2, ' ').take(2)
-        val decPart = valueParts.getOrElse(1) { "0" }.take(1)
-        return (intPart + decPart + " " + arrow).take(6)
+        val unit = GlycemiaUnitStore.getUnit(applicationContext)
+
+        return if (unit == GlycemiaUnit.MG_DL) {
+            // mg/dL: plain 3-digit integer + 1 blank spacer + 2 char arrow = 6 total
+            val intVal = mgDlValue.coerceIn(0f, 999f).toInt()
+            val valueStr = intVal.toString().padStart(3, ' ')
+            (valueStr + " " + arrow).take(6)
+        } else {
+            val mmol = mgDlValue / GlycemiaUnitStore.MGDL_PER_MMOL
+            val valueStr = String.format("%.1f", mmol.coerceIn(0f, 99.9f))
+
+            // watch has a fixed hardware colon that doubles as the decimal
+            // point, so we never send ".": 2 chars int part + 1 decimal digit
+            // + 1 blank spacer + 2 char arrow = 6 total
+            val valueParts = valueStr.split(".")
+            val intPart = valueParts[0].padStart(2, ' ').take(2)
+            val decPart = valueParts.getOrElse(1) { "0" }.take(1)
+            (intPart + decPart + " " + arrow).take(6)
+        }
     }
 
     private fun sendClearGlycemiaToAllWatches() {
