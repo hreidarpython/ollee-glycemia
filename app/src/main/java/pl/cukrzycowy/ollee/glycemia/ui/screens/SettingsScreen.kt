@@ -42,6 +42,9 @@ import pl.cukrzycowy.ollee.glycemia.WatchActivityState
 import pl.cukrzycowy.ollee.glycemia.BleService
 import pl.cukrzycowy.ollee.glycemia.DebugStore
 import pl.cukrzycowy.ollee.glycemia.PreferencesBackupManager
+import pl.cukrzycowy.ollee.glycemia.GlycemiaUnit
+import pl.cukrzycowy.ollee.glycemia.GlycemiaUnitStore
+import pl.cukrzycowy.ollee.glycemia.ui.components.SimpleSelector
 import pl.cukrzycowy.ollee.glycemia.StoragePermissionHelper
 import pl.cukrzycowy.ollee.glycemia.StoragePermissionStore
 import androidx.compose.material3.AlertDialog
@@ -118,6 +121,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     var aboutExpanded by remember { mutableStateOf(true) }
     var devOptionsExpanded by remember { mutableStateOf(false) }
 
+    var unit by remember { mutableStateOf(GlycemiaUnitStore.getUnit(context)) }
+    var unitsExpanded by remember { mutableStateOf(true) }
     LaunchedEffect(allPermissionsGranted) {
         if (allPermissionsGranted) {
             permissionsExpanded = false
@@ -209,6 +214,36 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 }
             }
+
+        FoldableSection(
+            title = "Units",
+            expanded = unitsExpanded,
+            onToggle = { unitsExpanded = it }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(OlleeSpacing.sm)
+            ) {
+                SimpleSelector(
+                    text = "mmol/L",
+                    selected = unit == GlycemiaUnit.MMOL_L,
+                    onClick = {
+                        unit = GlycemiaUnit.MMOL_L
+                        GlycemiaUnitStore.setUnit(context, GlycemiaUnit.MMOL_L)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                SimpleSelector(
+                    text = "mg/dL",
+                    selected = unit == GlycemiaUnit.MG_DL,
+                    onClick = {
+                        unit = GlycemiaUnit.MG_DL
+                        GlycemiaUnitStore.setUnit(context, GlycemiaUnit.MG_DL)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
 
             FoldableSection(
                 title = stringResource(R.string.settings_watch_labels),
