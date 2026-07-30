@@ -13,6 +13,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
+import pl.cukrzycowy.ollee.glycemia.GlycemiaUnitStore
 
 class GlycemiaGraphView @JvmOverloads constructor(
     context: Context,
@@ -241,6 +242,7 @@ class GlycemiaGraphView @JvmOverloads constructor(
         minY: Float,
         maxY: Float
     ) {
+        val unit = GlycemiaUnitStore.getUnit(context)
         val yValues = linkedSetOf<Int>()
         val horizontalStart = floor(minY / 20f).toInt() * 20
         val horizontalEnd = ceil(maxY / 20f).toInt() * 20
@@ -256,7 +258,7 @@ class GlycemiaGraphView @JvmOverloads constructor(
             .forEach { value ->
                 val y = mapValueToY(value.toFloat(), minY, maxY, plotTop, plotBottom)
                 val paint = if (value == TARGET_MIN_MGDL.toInt() || value == TARGET_MAX_MGDL.toInt()) targetLabelPaint else yAxisLabelPaint
-                canvas.drawText(value.toString(), 6f * density, y + 4f * density, paint)
+                canvas.drawText(GlycemiaUnitStore.formatMgDl(value.toFloat(), unit), 6f * density, y + 4f * density, paint)
             }
 
         val now = System.currentTimeMillis()
